@@ -50,13 +50,46 @@ export default function PdfViewer() {
     }
   };
 
-  return (
-    <div style={{ padding: "2rem" }}>
-      <h2>Upload a PDF</h2>
-      <input type="file" onChange={handleFile} />
-      <div style={{ marginTop: "1rem" }}>
-        <canvas ref={canvasRef} style={{ border: "1px solid #ccc" }} />
-      </div>
+ return (
+  <div style={{ padding: "2rem" }}>
+    <h2>Upload a PDF</h2>
+    <input type="file" onChange={handleFile} />
+    <div style={{ marginTop: "1rem" }}>
+      <canvas ref={canvasRef} style={{ border: "1px solid #ccc" }} />
     </div>
-  );
+
+    {pdfDoc && (
+      <div style={{ marginTop: "1rem" }}>
+        <button
+          onClick={async () => {
+            if (pageNum > 1) {
+              const pdfjsLib = await import("pdfjs-dist");
+              const newPage = pageNum - 1;
+              setPageNum(newPage);
+              renderPage(newPage, pdfjsLib, pdfDoc);
+            }
+          }}
+        >
+          Previous
+        </button>
+        <button
+          onClick={async () => {
+            if (pdfDoc && pageNum < pdfDoc.numPages) {
+              const pdfjsLib = await import("pdfjs-dist");
+              const newPage = pageNum + 1;
+              setPageNum(newPage);
+              renderPage(newPage, pdfjsLib, pdfDoc);
+            }
+          }}
+        >
+          Next
+        </button>
+        <span style={{ marginLeft: "1rem" }}>
+          Page {pageNum} of {pdfDoc.numPages}
+        </span>
+      </div>
+    )}
+  </div>
+);
+
 }
