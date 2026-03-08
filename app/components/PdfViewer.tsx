@@ -14,6 +14,14 @@ export default function PdfViewer() {
   const renderTaskRefLeft = useRef<any>(null);
   const renderTaskRefRight = useRef<any>(null);
 
+  const SCALE = 1.5;
+
+  const clearCanvas = (canvas: HTMLCanvasElement | null) => {
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
   const renderPage = async (
     num: number,
     pdf: any,
@@ -30,7 +38,7 @@ export default function PdfViewer() {
     }
 
     const page = await pdf.getPage(num);
-    const viewport = page.getViewport({ scale: 1.5 });
+    const viewport = page.getViewport({ scale: SCALE });
 
     const context = canvasEl.getContext("2d");
     if (!context) return;
@@ -61,15 +69,6 @@ export default function PdfViewer() {
 
     if (startPage === 1) {
       await renderPage(1, pdf, canvasRefRight.current, renderTaskRefRight);
-      if (canvasRefLeft.current) {
-        const ctx = canvasRefLeft.current.getContext("2d");
-        ctx?.clearRect(
-          0,
-          0,
-          canvasRefLeft.current.width,
-          canvasRefLeft.current.height
-        );
-      }
       return;
     }
 
@@ -103,8 +102,12 @@ export default function PdfViewer() {
     await page.render({ canvasContext: context, viewport }).promise;
   };
 
+  // Efecto principal: mantiene la página actual
   useEffect(() => {
     if (!pdfDoc) return;
+
+    clearCanvas(canvasRefLeft.current);
+    clearCanvas(canvasRefRight.current);
 
     const render = async () => {
       await renderSpread(pageNum, pdfDoc);
@@ -112,6 +115,18 @@ export default function PdfViewer() {
 
     render();
   }, [pdfDoc, pageNum, twoPage]);
+
+  // Efecto secundario: asegura que al entrar a Kindle se dibuje en el primer intento
+  useEffect(() => {
+    if (!pdfDoc) return;
+    if (viewMode !== "kindle") return;
+
+    const render = async () => {
+      await renderSpread(pageNum, pdfDoc);
+    };
+
+    render();
+  }, [viewMode]);
 
   const handleFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = event.target.files?.[0];
@@ -124,7 +139,6 @@ export default function PdfViewer() {
         if (!reader.result) return;
 
         const pdfjsLib = await import("pdfjs-dist");
-
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
         const pdf = await pdfjsLib.getDocument({
@@ -132,7 +146,7 @@ export default function PdfViewer() {
         }).promise;
 
         setPdfDoc(pdf);
-        setPageNum(1);
+        setPageNum(1); // reinicia solo al cargar un nuevo PDF
       };
 
       reader.readAsArrayBuffer(uploadedFile);
@@ -175,15 +189,12 @@ export default function PdfViewer() {
 
   return (
     <div style={{ padding: "2rem" }}>
-      <h2>Interactive Reader Prototype</h2>
 
       <input type="file" onChange={handleFile} />
 
       <div style={{ marginTop: "1rem" }}>
         <button onClick={() => setViewMode("preview")}>Preview Mode</button>
-
         <button onClick={() => setViewMode("kindle")}>Kindle Mode</button>
-
         {viewMode === "kindle" && (
           <button onClick={() => setTwoPage(!twoPage)}>
             {twoPage ? "Single Page" : "Two Pages"}
@@ -224,19 +235,17 @@ export default function PdfViewer() {
                 position: "relative",
                 display: "flex",
                 justifyContent: "center",
-                gap: "1rem",
-                maxWidth: "1000px",
+                gap: "2rem",
+                maxWidth: "90%",
                 margin: "0 auto",
               }}
             >
-              {/* LEFT PAGE */}
-              <div style={{ position: "relative" }}>
-                <canvas
-                  ref={canvasRefLeft}
-                  style={{ border: "1px solid #ccc", display: "block" }}
-                />
-
-                {twoPage && (
+              {twoPage && pageNum > 1 && (
+                <div style={{ position: "relative" }}>
+                  <canvas
+                    ref={canvasRefLeft}
+                    style={{ border: "1px solid #ccc", display: "block" }}
+                  />
                   <div
                     style={{
                       position: "absolute",
@@ -248,17 +257,15 @@ export default function PdfViewer() {
                     }}
                     onClick={goPrev}
                   />
-                )}
-              </div>
+                </div>
+              )}
 
-              {/* RIGHT PAGE */}
               {twoPage && (
                 <div style={{ position: "relative" }}>
                   <canvas
                     ref={canvasRefRight}
                     style={{ border: "1px solid #ccc", display: "block" }}
                   />
-
                   <div
                     style={{
                       position: "absolute",
@@ -274,7 +281,11 @@ export default function PdfViewer() {
               )}
 
               {!twoPage && (
-                <>
+                <div style={{ position: "relative" }}>
+                  <canvas
+                    ref={canvasRefLeft}
+                    style={{ border: "1px solid #ccc", display: "block" }}
+                  />
                   <div
                     style={{
                       position: "absolute",
@@ -286,7 +297,6 @@ export default function PdfViewer() {
                     }}
                     onClick={goPrev}
                   />
-
                   <div
                     style={{
                       position: "absolute",
@@ -298,7 +308,7 @@ export default function PdfViewer() {
                     }}
                     onClick={goNext}
                   />
-                </>
+                </div>
               )}
             </div>
 

@@ -1,26 +1,93 @@
-@import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* Fondo general y texto */
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: #000000; /* negro */
+  color: #ffffff;            /* blanco */
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Botones dorados */
+button {
+  background-color: #d4af37; /* dorado */
+  color: #000;               /* texto negro para contraste */
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.1s ease;
+  margin-right: 0.5rem;
+}
+
+button:hover {
+  background-color: #b8860b; /* dorado más oscuro */
+  transform: scale(1.05);
+}
+
+button:active {
+  background-color: #a67c00; /* dorado intenso */
+}
+
+/* Input de archivo más lindo */
+input[type="file"] {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background-color: #222;
+  color: #fff;
+  cursor: pointer;
+  border: 1px solid #444;
+  transition: background-color 0.2s ease;
+}
+
+input[type="file"]:hover {
+  background-color: #333;
+}
+
+/* Canvas estilo página */
+canvas {
+  max-width: 100%;
+  height: auto !important;
+  background: #111; /* fondo oscuro para simular papel en dark mode */
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3); /* sombra dorada */
+}
+
+/* Barra superior (modo de vista) */
+.mode-toggle {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid #444;
+  margin-bottom: 1rem;
+}
+
+.mode-toggle button {
+  background: transparent;
+  color: #aaa;
+  border-bottom: 2px solid transparent;
+}
+
+.mode-toggle button.active {
+  color: #d4af37; /* dorado */
+  border-bottom: 2px solid #d4af37;
+}
+
+/* Indicador de página */
+.page-indicator {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: #222;
+  color: #d4af37; /* dorado */
+  font-size: 0.9rem;
+}
+
+/* Contenedor principal */
+.reader-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  background: #000;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.3); /* sombra dorada */
+}
+
