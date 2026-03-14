@@ -10,11 +10,16 @@ export default function PdfViewerPage() {
     return <p>Cargando sesión...</p>;
   }
 
-  if (!session?.user?.id) {
+  if (!session || !session.user) {
     return <p>No se encontró el usuario. Inicia sesión primero.</p>;
   }
 
-  const userId = session.user.id; // ahora TypeScript sabe que existe
+  // Ahora sí existe gracias al callback en NextAuth
+  const userId = (session.user as any).id;
+
+  if (!userId) {
+    return <p>El usuario no tiene un ID válido.</p>;
+  }
 
   return (
     <main style={{ height: "100vh", width: "100%" }}>

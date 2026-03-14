@@ -12,28 +12,27 @@ const handler = NextAuth({
     }),
   ],
   session: { strategy: "jwt" },
+  secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async signIn({ user }) {
-      // El adapter ya crea el usuario si no existe, así que no necesitas lógica extra aquí
       return true;
     },
     async jwt({ token, user }) {
-      // Cuando se crea el usuario, adjuntamos su _id al token
       if (user) {
-        token.id = user.id; // el adapter expone el id del documento en Mongo
+        token.id = user.id ?? token.sub; // 👈 fallback seguro
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        // Pasamos el ObjectId real a la sesión
         session.user.id = token.id as string;
       }
       return session;
     },
-    async redirect({ baseUrl }) {
-      // Después de login, mandamos al visor
-      return `${baseUrl}/pdfviewer`;
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith(baseUrl)) return url;
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      return baseUrl;
     },
   },
 });
