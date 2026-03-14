@@ -1,50 +1,41 @@
 import { useState, useEffect } from "react";
-import * as pdfjsLib from "pdfjs-dist";
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-
-export function usePdfDocument() {
+export function usePdfDocument(userId: string) {
   const [pdfDoc, setPdfDoc] = useState<any>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [fileId, setFileId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const savedFile = localStorage.getItem("pdfFile");
-    if (savedFile) {
-      const { data } = JSON.parse(savedFile);
-      (async () => {
-        const pdf = await pdfjsLib.getDocument({
-          data: new Uint8Array(data),
-        }).promise;
-        setPdfDoc(pdf);
-      })();
-    }
-  }, []);
+  // Cargar PDF desde backend (GridFS)
+  const loadPdfFromServer = async (fileId: string, name: string) => {
+    const pdfjsLib = await import("pdfjs-dist");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
-const loadFile = async (file: File) => {
-  const reader = new FileReader();
-  reader.onload = async () => {
-    if (!reader.result) return;
-
-    const arrayBuffer = reader.result as ArrayBuffer;
-    const uint8Array = new Uint8Array(arrayBuffer); // 👈 conviertes aquí
+    const res = await fetch(`/api/getPdf?fileId=${fileId}`);
+    const arrayBuffer = await res.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
 
     const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
     setPdfDoc(pdf);
-    setFileName(file.name);
-
-    // Guardar archivo en localStorage
-    localStorage.setItem(
-      "pdfFile",
-      JSON.stringify({
-        name: file.name,
-        data: Array.from(uint8Array), // 👈 ya convertido, no se detacha
-      })
-    );
+    setFileName(name);
+    setFileId(fileId);
   };
 
-  reader.readAsArrayBuffer(file);
-};
+  // Subir archivo nuevo al backend
+  const uploadFile = async (file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("userId", userId);
 
+    const res = await fetch("/api/uploadPdf", {
+      method: "POST",
+      body: formData,
+    });
 
-  return { pdfDoc, fileName, loadFile };
+    const data = await res.json();
+    if (data.success) {
+      await loadPdfFromServer(data.fileId, file.name);
+    }
+  };
+
+  return { pdfDoc, fileName, fileId, uploadFile, loadPdfFromServer };
 }

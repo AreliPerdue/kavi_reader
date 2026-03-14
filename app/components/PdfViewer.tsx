@@ -5,8 +5,8 @@ import { usePdfDocument } from "./usePdfDocument";
 import { PdfNavigation } from "./PdfNavigation";
 import { PdfPageRenderer } from "./PdfPageRenderer";
 
-export default function PdfViewer() {
-  const { pdfDoc, fileName, loadFile } = usePdfDocument();
+export default function PdfViewer({ userId }: { userId: string }) {
+  const { pdfDoc, fileName, fileId, uploadFile } = usePdfDocument(userId);
   const [pageNum, setPageNum] = useState(1);
   const [viewMode, setViewMode] = useState<"preview" | "kindle">("kindle");
   const [twoPage, setTwoPage] = useState(false);
@@ -15,7 +15,7 @@ export default function PdfViewer() {
 
   const handleFile = (event: React.ChangeEvent<HTMLInputElement>) => {
     const uploadedFile = event.target.files?.[0];
-    if (uploadedFile) loadFile(uploadedFile);
+    if (uploadedFile) uploadFile(uploadedFile);
   };
 
   return (
@@ -43,13 +43,21 @@ export default function PdfViewer() {
         />
       )}
 
-      <div style={{ textAlign: "center", marginTop: "1rem" }}>
-        {twoPage
-          ? pageNum === 1
-            ? `Page 1 of ${pdfDoc?.numPages}`
-            : `Pages ${pageNum}–${Math.min(pageNum + 1, pdfDoc?.numPages)} of ${pdfDoc?.numPages}`
-          : `Page ${pageNum} of ${pdfDoc?.numPages}`}
-      </div>
+      {pdfDoc && (
+        <div style={{ textAlign: "center", marginTop: "1rem" }}>
+          {twoPage
+            ? pageNum === 1
+              ? `Page 1 of ${pdfDoc?.numPages}`
+              : `Pages ${pageNum}–${Math.min(pageNum + 1, pdfDoc?.numPages)} of ${pdfDoc?.numPages}`
+            : `Page ${pageNum} of ${pdfDoc?.numPages}`}
+        </div>
+      )}
+
+      {fileName && (
+        <div style={{ textAlign: "center", marginTop: "0.5rem", fontStyle: "italic" }}>
+          {`Currently viewing: ${fileName}`}
+        </div>
+      )}
     </div>
   );
 }

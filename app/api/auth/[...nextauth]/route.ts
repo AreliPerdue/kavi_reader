@@ -13,32 +13,26 @@ const handler = NextAuth({
   ],
   session: { strategy: "jwt" },
   callbacks: {
-    async signIn({ user, account }) {
-      const client = await clientPromise;
-      const db = client.db();
-
-      const existingUser = await db.collection("users").findOne({ email: user.email });
-
-      let loginType: string | null = null;
-      if (account && (account as any).url) {
-        const url = new URL((account as any).url);
-        loginType = url.searchParams.get("loginType");
-      }
-
-      if (loginType === "login" && !existingUser) {
-        throw new Error("No se encontró la cuenta, por favor regístrate con Google.");
-      }
-
+    async signIn({ user }) {
+      // El adapter ya crea el usuario si no existe, así que no necesitas lógica extra aquí
       return true;
+    },
+    async jwt({ token, user }) {
+      // Cuando se crea el usuario, adjuntamos su _id al token
+      if (user) {
+        token.id = user.id; // el adapter expone el id del documento en Mongo
+      }
+      return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.sub;
+        // Pasamos el ObjectId real a la sesión
+        session.user.id = token.id as string;
       }
       return session;
     },
-    async redirect({ url, baseUrl }) {
-      // 👇 Aquí decides a dónde mandar al usuario después de login
+    async redirect({ baseUrl }) {
+      // Después de login, mandamos al visor
       return `${baseUrl}/pdfviewer`;
     },
   },
