@@ -23,19 +23,20 @@ function NewBookButton({ coverUrl, title, onClick }: NewBookButtonProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
       <button
-        style={{
-          width: "150px",
-          height: "220px",
-          backgroundColor: "#222",
-          border: "none",
-          borderRadius: "8px",
-          cursor: "pointer",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          overflow: "hidden",
-          transition: "background-color 0.3s",
-        }}
+  onClick={onClick}
+  style={{
+    width: "150px",
+    height: "220px",
+    backgroundColor: "#222",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+    transition: "background-color 0.3s",
+  }}
    onMouseEnter={(e) => {
   e.currentTarget.style.backgroundColor = "#444";
   e.currentTarget.style.transform = "translateY(-4px)";
