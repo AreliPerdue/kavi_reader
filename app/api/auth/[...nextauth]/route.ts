@@ -1,9 +1,9 @@
-import NextAuth from "next-auth";
+import NextAuth, { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import clientPromise from "@/lib/mongodb";
 import { MongoDBAdapter } from "@next-auth/mongodb-adapter";
 
-const handler = NextAuth({
+export const authOptions: NextAuthOptions = {
   adapter: MongoDBAdapter(clientPromise),
   providers: [
     GoogleProvider({
@@ -17,9 +17,13 @@ const handler = NextAuth({
     async signIn({ user }) {
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, account }) {
       if (user) {
-        token.id = user.id ?? token.sub; // 👈 fallback seguro
+        token.id = user.id ?? token.sub;
+      }
+      // guarda el flag remember si lo recibes desde signIn
+      if (account && (account as any).remember !== undefined) {
+        token.remember = (account as any).remember;
       }
       return token;
     },
@@ -27,6 +31,8 @@ const handler = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
       }
+      // expone el flag remember en la sesión
+      (session as any).remember = token.remember ?? false;
       return session;
     },
     async redirect({ url, baseUrl }) {
@@ -35,6 +41,13 @@ const handler = NextAuth({
       return baseUrl;
     },
   },
-});
+};
 
-export { handler as GET, handler as POST };
+// 👇 Named exports para cada método HTTP
+export const GET = NextAuth(authOptions);
+export const POST = NextAuth(authOptions);
+export const PUT = NextAuth(authOptions);
+export const DELETE = NextAuth(authOptions);
+export const HEAD = NextAuth(authOptions);
+export const OPTIONS = NextAuth(authOptions);
+export const PATCH = NextAuth(authOptions);
