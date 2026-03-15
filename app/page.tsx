@@ -36,24 +36,42 @@ function NewBookButton({ coverUrl, title, onClick }: NewBookButtonProps) {
           overflow: "hidden",
           transition: "background-color 0.3s",
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#444")}
-        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#222")}
-        onClick={onClick}
+   onMouseEnter={(e) => {
+  e.currentTarget.style.backgroundColor = "#444";
+  e.currentTarget.style.transform = "translateY(-4px)";
+}}
+onMouseLeave={(e) => {
+  e.currentTarget.style.backgroundColor = "#222";
+  e.currentTarget.style.transform = "translateY(0)";
+}}
       >
         {coverUrl ? (
-          <img
-            src={coverUrl}
-            alt="Book cover"
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
+         <img
+  src={coverUrl}
+  alt="Book cover"
+  style={{
+
+    height: "100%",
+    objectFit: "cover",
+    borderRadius: "6px",
+  }}
+/>
         ) : (
           <span style={{ color: "#fff", fontSize: "48px" }}>+</span>
         )}
       </button>
 
-      <div style={{ marginTop: "0.5rem", color: "#fff", fontSize: "16px" }}>
-        {title ?? "New book"}
-      </div>
+<div
+  style={{
+    marginTop: "0.4rem",
+    color: "#ddd",
+    fontSize: "15px",
+    textAlign: "center",
+    maxWidth: "150px",
+  }}
+>
+  {title ?? "New book"}
+</div>
     </div>
   );
 }
@@ -186,8 +204,16 @@ export default function HomePage() {
       </header>
 
       {/* SECCIÓN DEBAJO DEL HEADER */}
-      <main style={{ padding: "2rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-{books.map((book, index) => (
+<main
+  style={{
+    padding: "2rem",
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, 150px)",
+    gap: "1.5rem",
+    justifyContent: "start",
+    
+  }}
+>{books.map((book, index) => (
   <NewBookButton
     key={index}
     coverUrl={book.coverUrl}
