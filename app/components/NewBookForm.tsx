@@ -1,49 +1,122 @@
 "use client";
 
 import React, { useEffect } from "react";
-import * as pdfjsLib from "pdfjs-dist";
-import { GlobalWorkerOptions } from "pdfjs-dist";
+
 
 export default function NewBookForm({ onClose }: { onClose: () => void }) {
-  const [pdfName, setPdfName] = React.useState<string | null>(null);
-  const [numPages, setNumPages] = React.useState<string>("");
-  const [frontCover, setFrontCover] = React.useState<string | null>(null);
-  const [backCover, setBackCover] = React.useState<string | null>(null);
-  const [spine, setSpine] = React.useState<string | null>(null);
-  const [starRating, setStarRating] = React.useState<number>(0);
-  const [numericRating, setNumericRating] = React.useState<string>("");
 
-  // Estados para HEX
+const [pdfName, setPdfName] = React.useState<string | null>(null);
+const [numPages, setNumPages] = React.useState<string>("");
+const [title, setTitle] = React.useState("");
+const [author, setAuthor] = React.useState("");
+const [editorial, setEditorial] = React.useState("");
+const [genre, setGenre] = React.useState("");
+const [publishingPlace, setPublishingPlace] = React.useState("");
+const [edition, setEdition] = React.useState("");
+const [chapters, setChapters] = React.useState("");
+const [frontCover, setFrontCover] = React.useState<string | null>(null);
+const [backCover, setBackCover] = React.useState<string | null>(null);
+const [spine, setSpine] = React.useState<string | null>(null);
+
+const [starRating, setStarRating] = React.useState<number>(0);const [numericRating, setNumericRating] = React.useState<string>("");
+
+
+
   const [frontHex, setFrontHex] = React.useState<string>("#000000");
   const [spineHex, setSpineHex] = React.useState<string>("#000000");
   const [backHex, setBackHex] = React.useState<string>("#000000");
 
+  const [synopsis, setSynopsis] = React.useState<string>("");
+
   useEffect(() => {
-    // ✅ Ruta correcta: se sirve como /pdf.worker.js
-    GlobalWorkerOptions.workerSrc = "/pdf.worker.js";
+    const loadPdfWorker = async () => {
+      const pdfjsLib = await import("pdfjs-dist");
+      pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+    };
+
+    loadPdfWorker();
   }, []);
 
-  const handleFileUpload = async (
+  const generatePdfCover = async (pdf: any) => {
+
+  const page = await pdf.getPage(1);
+  const viewport = page.getViewport({ scale: 1.5 });
+
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  if (!context) return null;
+
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  await page.render({
+    canvasContext: context,
+    viewport
+  }).promise;
+
+  return canvas.toDataURL("image/png");
+};
+
+   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
     setter?: (url: string) => void
   ) => {
+
     const file = event.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      if (setter) setter(url);
 
-      if (file.type === "application/pdf") {
-        setPdfName(file.name);
-        try {
-          const pdf = await pdfjsLib.getDocument({ url }).promise;
-          setNumPages(pdf.numPages.toString());
-        } catch (err) {
-          console.error("Error leyendo PDF:", err);
-        }
-      }
+    if (!file) return;
+
+    const url = URL.createObjectURL(file);
+
+    if (setter) setter(url);
+
+   if (file.type === "application/pdf") {
+
+  setPdfName(file.name);
+
+  try {
+
+    const pdfjsLib = await import("pdfjs-dist");
+
+    const pdf = await pdfjsLib.getDocument({ url }).promise;
+
+    // auto fill number of pages
+    setNumPages(pdf.numPages.toString());
+
+    // read metadata
+    const metadata = await pdf.getMetadata();
+
+    if (metadata?.info) {
+
+      const info: any = metadata.info;
+
+      if (info.Title) setTitle(info.Title);
+      if (info.Author) setAuthor(info.Author);
+      if (info.Creator) setEditorial(info.Creator);
+      if (info.Subject) setGenre(info.Subject);
+
     }
-  };
 
+    // generate cover from page 1 if user didn't upload one
+    if (!frontCover) {
+
+      const cover = await generatePdfCover(pdf);
+
+      if (cover) {
+        setFrontCover(cover);
+      }
+
+    }
+
+  } catch (err) {
+
+    console.error("Error leyendo PDF:", err);
+
+  }
+}
+  };
+  
   const handleImageClick = (
     e: React.MouseEvent<HTMLImageElement>,
     setter: (hex: string) => void
@@ -73,6 +146,42 @@ export default function NewBookForm({ onClose }: { onClose: () => void }) {
 
     setter(hex);
   };
+
+  // 👉 Aquí va la integración con Mongo vía API
+  const handleSubmit = async () => {
+    const bookData = {
+      frontCover,
+      spine,
+      backCover,
+      frontHex,
+      spineHex,
+      backHex,
+      starRating,
+      numericRating,
+      numPages,
+      synopsis,
+      pdfUrl: pdfName,
+      userId: "ID_DE_TU_USUARIO", // reemplaza con tu id real
+    };
+
+    try {
+      const res = await fetch("/api/books", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bookData),
+      });
+
+      if (!res.ok) {
+        throw new Error("Error al guardar el libro");
+      }
+
+      const result = await res.json();
+      console.log("Libro guardado en Mongo:", result);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div
       style={{
@@ -126,26 +235,33 @@ export default function NewBookForm({ onClose }: { onClose: () => void }) {
 
         {/* Metadata */}
         <div>
-          {[
-            "Title", "Author", "Editorial", "Genre", "Publishing place",
-            "Edition", "# of pages", "# of chapters"
-          ].map((label, i) => (
+{[
+  { label: "Title", value: title, setter: setTitle },
+  { label: "Author", value: author, setter: setAuthor },
+  { label: "Editorial", value: editorial, setter: setEditorial },
+  { label: "Genre", value: genre, setter: setGenre },
+  { label: "Publishing place", value: publishingPlace, setter: setPublishingPlace },
+  { label: "Edition", value: edition, setter: setEdition },
+  { label: "# of pages", value: numPages, setter: setNumPages },
+  { label: "# of chapters", value: chapters, setter: setChapters }
+].map((field, i) => (
             <div key={i} style={{ marginBottom: "0.6rem" }}>
-              <label style={{ display: "block", marginBottom: "0.2rem", fontSize: "14px" }}>{label}:</label>
-              <input
-                type="text"
-                value={label === "# of pages" ? numPages : undefined}
-                onChange={(e) => label === "# of pages" ? setNumPages(e.target.value) : undefined}
-                style={{
-                  width: "90%",
-                  padding: "0.4rem",
-                  borderRadius: "6px",
-                  border: "1px solid #444",
-                  backgroundColor: "#111",
-                  color: "#fff",
-                  fontSize: "14px",
-                }}
-              />
+<label style={{ display: "block", marginBottom: "0.2rem", fontSize: "14px" }}>
+  {field.label}:
+</label>              <input
+  type="text"
+  value={field.value}
+  onChange={(e) => field.setter(e.target.value)}
+  style={{
+    width: "90%",
+    padding: "0.4rem",
+    borderRadius: "6px",
+    border: "1px solid #444",
+    backgroundColor: "#111",
+    color: "#fff",
+    fontSize: "14px",
+  }}
+/>
             </div>
           ))}
         </div>
@@ -401,64 +517,69 @@ export default function NewBookForm({ onClose }: { onClose: () => void }) {
   <label style={{ display: "block", marginBottom: "0.2rem", marginTop: "0", padding: "0", lineHeight: "1" }}>
     Synopsis:
   </label>
-  <textarea
-    rows={4}
-    style={{
-      width: "100%",
-      padding: "0.5rem",
-      borderRadius: "6px",
-      border: "1px solid #444",
-      backgroundColor: "#111",
-      color: "#fff",
-      margin: 0,          // elimina margen inferior
-      lineHeight: "1.2",  // compacta la altura de línea
-      resize: "vertical", // opcional: permite ajustar altura manualmente
-    }}
-  />
+<textarea
+  rows={4}
+  value={synopsis}
+  onChange={(e) => setSynopsis(e.target.value)}
+  style={{
+    width: "100%",
+    padding: "0.5rem",
+    borderRadius: "6px",
+    border: "1px solid #444",
+    backgroundColor: "#111",
+    color: "#fff",
+    margin: 0,
+    lineHeight: "1.2",
+    resize: "vertical",
+  }}
+/>
 </div>
 
-        {/* Botones */}
-        <div
-          style={{
-            gridColumn: "1 / span 2",
-            display: "flex",
-            justifyContent: "flex-end",
-            gap: "1rem",
-            marginTop: "1rem",
-          }}
-        >
-          <button
-            style={{
-              backgroundColor: "#444",
-              color: "#fff",
-              padding: "0.6rem 1.2rem",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              transition: "background-color 0.3s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#666")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#444")}
-          >
-            Add PDF to Library
-          </button>
-          <button
-            onClick={onClose}
-            style={{
-              backgroundColor: "#222",
-              color: "#fff",
-              padding: "0.6rem 1.2rem",
-              border: "none",
-              borderRadius: "6px",
-              cursor: "pointer",
-              transition: "background-color 0.3s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#444")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#222")}
-          >
-            Close
-          </button>
-        </div>
+ {/* Botones */}
+<div
+  style={{
+    gridColumn: "1 / span 2",
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: "1rem",
+    marginTop: "1rem",
+  }}
+>
+  <button
+    onClick={handleSubmit} // 👉 aquí conectamos la función
+    style={{
+      backgroundColor: "#444",
+      color: "#fff",
+      padding: "0.6rem 1.2rem",
+      border: "none",
+      borderRadius: "6px",
+      cursor: "pointer",
+      transition: "background-color 0.3s",
+    }}
+    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#666")}
+    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#444")}
+  >
+    Add PDF to Library
+  </button>
+
+  <button
+    onClick={onClose}
+    style={{
+      backgroundColor: "#222",
+      color: "#fff",
+      padding: "0.6rem 1.2rem",
+      border: "none",
+      borderRadius: "6px",
+      cursor: "pointer",
+      transition: "background-color 0.3s",
+    }}
+    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#444")}
+    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#222")}
+  >
+    Close
+  </button>
+</div>
+
       </div>
     </div>
   );
