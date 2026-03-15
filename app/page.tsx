@@ -3,6 +3,7 @@
 import React from "react";
 import { useSession } from "next-auth/react";
 import { Poiret_One, Moirai_One } from "next/font/google";
+import NewBookForm from "./components/NewBookForm";
 
 const poiret = Poiret_One({ weight: "400", subsets: ["latin"] });
 const morai = Moirai_One({ weight: "400", subsets: ["latin"] });
@@ -49,8 +50,6 @@ function NewBookButton({ coverUrl, title, onClick }: NewBookButtonProps) {
           <span style={{ color: "#fff", fontSize: "48px" }}>+</span>
         )}
       </button>
-
-      {/* Etiqueta debajo */}
       <div style={{ marginTop: "0.5rem", color: "#fff", fontSize: "16px" }}>
         {title ?? "New book"}
       </div>
