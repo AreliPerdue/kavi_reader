@@ -1,15 +1,20 @@
-import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
+import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
+
+  console.log("API ROUTE HIT");
+
+  const body = await req.json();
+
   const client = await clientPromise;
-  const db = client.db("tuNombreDeDB"); // cambia por el nombre de tu base
-  const data = await req.json();
 
-  const result = await db.collection("books").insertOne({
-    ...data,
-    createdAt: new Date(),
+  const db = client.db("KAVI-reader");
+
+  const result = await db.collection("books").insertOne(body);
+
+  return NextResponse.json({
+    success: true,
+    id: result.insertedId
   });
-
-  return NextResponse.json({ success: true, bookId: result.insertedId });
 }
