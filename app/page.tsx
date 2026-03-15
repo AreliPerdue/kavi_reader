@@ -50,6 +50,7 @@ function NewBookButton({ coverUrl, title, onClick }: NewBookButtonProps) {
           <span style={{ color: "#fff", fontSize: "48px" }}>+</span>
         )}
       </button>
+
       <div style={{ marginTop: "0.5rem", color: "#fff", fontSize: "16px" }}>
         {title ?? "New book"}
       </div>
@@ -59,20 +60,12 @@ function NewBookButton({ coverUrl, title, onClick }: NewBookButtonProps) {
 
 export default function HomePage() {
   const { data: session } = useSession();
-
-  // Array de libros
+  
   const [books, setBooks] = React.useState<Book[]>([{ coverUrl: null, title: null }]);
+  const [showForm, setShowForm] = React.useState(false);
 
   const handleNewBookClick = (index: number) => {
-    // Simulación: cargar un PDF en el slot actual
-    const newBooks = [...books];
-    newBooks[index] = {
-      coverUrl: "url_de_la_portada",
-      title: "Mi PDF cargado",
-    };
-
-    // Agregar automáticamente un nuevo slot vacío al final
-    setBooks([...newBooks, { coverUrl: null, title: null }]);
+    setShowForm(true);
   };
 
   return (
@@ -193,6 +186,9 @@ export default function HomePage() {
           />
         ))}
       </main>
+
+      {/* MODAL DEL FORMULARIO */}
+      {showForm && <NewBookForm onClose={() => setShowForm(false)} />}
     </div>
   );
 }
