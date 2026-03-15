@@ -60,9 +60,19 @@ function NewBookButton({ coverUrl, title, onClick }: NewBookButtonProps) {
 
 export default function HomePage() {
   const { data: session } = useSession();
-  
-  const [books, setBooks] = React.useState<Book[]>([{ coverUrl: null, title: null }]);
+
+  const [books, setBooks] = React.useState<Book[]>([]);
   const [showForm, setShowForm] = React.useState(false);
+
+  const handleBookAdded = (book: any) => {
+    setBooks((prev) => [
+      ...prev,
+      {
+        coverUrl: book.frontCover ?? null,
+        title: book.title ?? "Untitled",
+      },
+    ]);
+  };
 
   const handleNewBookClick = (index: number) => {
     setShowForm(true);
@@ -177,18 +187,30 @@ export default function HomePage() {
 
       {/* SECCIÓN DEBAJO DEL HEADER */}
       <main style={{ padding: "2rem", display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-        {books.map((book, index) => (
-          <NewBookButton
-            key={index}
-            coverUrl={book.coverUrl}
-            title={book.title}
-            onClick={() => handleNewBookClick(index)}
-          />
-        ))}
+{books.map((book, index) => (
+  <NewBookButton
+    key={index}
+    coverUrl={book.coverUrl}
+    title={book.title}
+    onClick={() => {}}
+  />
+))}
+
+{/* Add new book slot */}
+<NewBookButton
+  coverUrl={null}
+  title="New book"
+  onClick={() => setShowForm(true)}
+/>
       </main>
 
       {/* MODAL DEL FORMULARIO */}
-      {showForm && <NewBookForm onClose={() => setShowForm(false)} />}
+      {showForm && (
+  <NewBookForm
+    onClose={() => setShowForm(false)}
+    onBookAdded={handleBookAdded}
+  />
+)}
     </div>
   );
 }

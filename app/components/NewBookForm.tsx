@@ -3,7 +3,13 @@
 import React, { useEffect } from "react";
 
 
-export default function NewBookForm({ onClose }: { onClose: () => void }) {
+export default function NewBookForm({
+  onClose,
+  onBookAdded
+}: {
+  onClose: () => void;
+  onBookAdded: (book: any) => void;
+}) {
 
 const [pdfName, setPdfName] = React.useState<string | null>(null);
 const [numPages, setNumPages] = React.useState<string>("");
@@ -149,21 +155,31 @@ const [starRating, setStarRating] = React.useState<number>(0);const [numericRati
 
   // 👉 Aquí va la integración con Mongo vía API
   const handleSubmit = async () => {
-    const bookData = {
-      frontCover,
-      spine,
-      backCover,
-      frontHex,
-      spineHex,
-      backHex,
-      starRating,
-      numericRating,
-      numPages,
-      synopsis,
-      pdfUrl: pdfName,
-      userId: "ID_DE_TU_USUARIO", // reemplaza con tu id real
-    };
+   const bookData = {
+  title,
+  author,
+  editorial,
+  genre,
+  publishingPlace,
+  edition,
+  chapters,
+  numPages,
 
+  frontCover,
+  spine,
+  backCover,
+
+  frontHex,
+  spineHex,
+  backHex,
+
+  starRating,
+  numericRating,
+
+  synopsis,
+  pdfUrl: pdfName,
+  userId: "ID_DE_TU_USUARIO",
+};
     try {
       const res = await fetch("/api/books", {
         method: "POST",
@@ -175,8 +191,11 @@ const [starRating, setStarRating] = React.useState<number>(0);const [numericRati
         throw new Error("Error al guardar el libro");
       }
 
-      const result = await res.json();
-      console.log("Libro guardado en Mongo:", result);
+const result = await res.json();
+console.log("Libro guardado en Mongo:", result);
+
+onBookAdded(bookData);
+onClose();
     } catch (err) {
       console.error(err);
     }

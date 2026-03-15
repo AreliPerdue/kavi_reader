@@ -9,7 +9,7 @@ export async function POST(req: Request) {
 
   const client = await clientPromise;
 
-  const db = client.db("KAVI-reader");
+  const db = client.db("KAVI_Reader");
 
   const result = await db.collection("books").insertOne(body);
 
