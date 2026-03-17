@@ -1,14 +1,13 @@
 "use client";
 
-export const revalidate = 0;
-
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
+import { Suspense } from "react"; // Add this
 
 const PdfViewer = dynamic(() => import("../components/PdfViewer"), { ssr: false });
 
-export default function PdfViewerPage() {
+function PdfViewerContent() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const fileKey = searchParams?.get("key") ?? "";
@@ -21,5 +20,13 @@ export default function PdfViewerPage() {
     <main style={{ height: "100vh", width: "100%" }}>
       <PdfViewer fileKey={fileKey} />
     </main>
+  );
+}
+
+export default function PdfViewerPage() {
+  return (
+    <Suspense fallback={<p>Cargando visor...</p>}>
+      <PdfViewerContent />
+    </Suspense>
   );
 }
