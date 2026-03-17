@@ -2,24 +2,21 @@
 
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
-import PdfViewer from "../components/PdfViewer";
+import dynamic from "next/dynamic";
+
+// 👇 Importa PdfViewer solo en cliente
+const PdfViewer = dynamic(() => import("../components/PdfViewer"), {
+  ssr: false,
+});
 
 export default function PdfViewerPage() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const fileKey = searchParams?.get("key") ?? "";
 
-  if (status === "loading") {
-    return <p>Cargando sesión...</p>;
-  }
-
-  if (!session?.user) {
-    return <p>No se encontró el usuario. Inicia sesión primero.</p>;
-  }
-
-  if (!fileKey) {
-    return <p>No se encontró el archivo PDF.</p>;
-  }
+  if (status === "loading") return <p>Cargando sesión...</p>;
+  if (!session?.user) return <p>No se encontró el usuario. Inicia sesión primero.</p>;
+  if (!fileKey) return <p>No se encontró el archivo PDF.</p>;
 
   return (
     <main style={{ height: "100vh", width: "100%" }}>
