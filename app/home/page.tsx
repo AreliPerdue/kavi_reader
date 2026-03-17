@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
-import { useSession } from "next-auth/react";
+import React, { useEffect } from "react";
+import { useSession, signOut } from "next-auth/react";
 import { Poiret_One, Moirai_One } from "next/font/google";
 import NewBookForm from "../components/NewBookForm";
 
@@ -9,8 +9,29 @@ const poiret = Poiret_One({ weight: "400", subsets: ["latin"] });
 const morai = Moirai_One({ weight: "400", subsets: ["latin"] });
 
 interface Book {
+  _id?: string;
   coverUrl?: string | null;
   title?: string | null;
+  pdfUrl?: string | null;
+}
+
+export function LogoutButton() {
+  return (
+    <button
+      onClick={() => signOut({ callbackUrl: "/login" })}
+      style={{
+        marginTop: "1rem",
+        padding: "10px 20px",
+        backgroundColor: "#e74c3c",
+        color: "white",
+        border: "none",
+        borderRadius: "4px",
+        cursor: "pointer",
+      }}
+    >
+      Logout
+    </button>
+  );
 }
 
 interface NewBookButtonProps {
@@ -23,56 +44,43 @@ function NewBookButton({ coverUrl, title, onClick }: NewBookButtonProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
       <button
-  onClick={onClick}
-  style={{
-    width: "150px",
-    height: "220px",
-    backgroundColor: "#222",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-    transition: "background-color 0.3s",
-  }}
-   onMouseEnter={(e) => {
-  e.currentTarget.style.backgroundColor = "#444";
-  e.currentTarget.style.transform = "translateY(-4px)";
-}}
-onMouseLeave={(e) => {
-  e.currentTarget.style.backgroundColor = "#222";
-  e.currentTarget.style.transform = "translateY(0)";
-}}
+        onClick={onClick}
+        style={{
+          width: "150px",
+          height: "220px",
+          backgroundColor: "#222",
+          border: "none",
+          borderRadius: "8px",
+          cursor: "pointer",
+          overflow: "hidden",
+        }}
       >
         {coverUrl ? (
-         <img
-  src={coverUrl}
-  alt="Book cover"
-  style={{
-
-    height: "100%",
-    objectFit: "cover",
-    borderRadius: "6px",
-  }}
-/>
+          <img
+            src={coverUrl}
+            alt="Book cover"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+          />
         ) : (
           <span style={{ color: "#fff", fontSize: "48px" }}>+</span>
         )}
       </button>
 
-<div
-  style={{
-    marginTop: "0.4rem",
-    color: "#ddd",
-    fontSize: "15px",
-    textAlign: "center",
-    maxWidth: "150px",
-  }}
->
-  {title ?? "New book"}
-</div>
+      <div
+        style={{
+          marginTop: "0.4rem",
+          color: "#ddd",
+          fontSize: "15px",
+          textAlign: "center",
+          maxWidth: "150px",
+        }}
+      >
+        {title ?? "New book"}
+      </div>
     </div>
   );
 }
@@ -82,6 +90,47 @@ export default function HomePage() {
 
   const [books, setBooks] = React.useState<Book[]>([]);
   const [showForm, setShowForm] = React.useState(false);
+  const [selectedBook, setSelectedBook] = React.useState<Book | null>(null);
+
+  useEffect(() => {
+    // 🔥 wait for session
+    if (!session?.user?.email) return;
+
+    const userEmail = session.user.email.toLowerCase();
+
+    console.log("📥 FETCHING FOR USER:", userEmail);
+
+    fetch("/api/books", {
+      headers: {
+        "user-id": userEmail, // 🔥 MUST MATCH BACKEND
+      },
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error("❌ FETCH ERROR:", errText);
+          throw new Error("Failed to fetch books");
+        }
+
+        const text = await res.text();
+        if (!text) return [];
+
+        return JSON.parse(text);
+      })
+      .then((data) => {
+        console.log("📚 BOOKS RECEIVED:", data);
+
+        const formatted = data.map((b: any) => ({
+          _id: b._id,
+          coverUrl: b.frontCover,
+          title: b.title,
+          pdfUrl: b.pdfUrl,
+        }));
+
+        setBooks(formatted);
+      })
+      .catch((err) => console.error("❌ Error fetching books:", err));
+  }, [session]); // 🔥 IMPORTANT
 
   const handleBookAdded = (book: any) => {
     setBooks((prev) => [
@@ -89,155 +138,61 @@ export default function HomePage() {
       {
         coverUrl: book.frontCover ?? null,
         title: book.title ?? "Untitled",
+        pdfUrl: book.pdfUrl ?? null,
       },
     ]);
   };
 
-  const handleNewBookClick = (index: number) => {
-    setShowForm(true);
-  };
-
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#000", color: "#fff" }}>
-      {/* HEADER */}
-      <header
-        style={{
-          display: "grid",
-          gridTemplateColumns: "auto 1fr auto 60px",
-          alignItems: "center",
-          width: "100%",
-          maxWidth: "100vw",
-          boxSizing: "border-box",
-          overflowX: "hidden",
-          padding: "1rem",
-          backgroundColor: "#000",
-          borderBottom: "1px solid #333",
-          gap: "1rem",
-        }}
-      >
-        {/* Columna 1: Logo + Greeting */}
-        <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: "0.5rem" }}>
-            <span className={morai.className} style={{ fontSize: "50px", fontWeight: "bold" }}>
-              KAVI
-            </span>
-            <span className={poiret.className} style={{ fontSize: "40px" }}>
-              Reader
-            </span>
+
+      <header style={{ display: "grid", gridTemplateColumns: "auto 1fr auto 60px", padding: "1rem" }}>
+        <div>
+          <div style={{ display: "flex", gap: "0.5rem" }}>
+            <span className={morai.className} style={{ fontSize: "50px" }}>KAVI</span>
+            <span className={poiret.className} style={{ fontSize: "40px" }}>Reader</span>
           </div>
-          <div className={poiret.className} style={{ fontSize: "15px", color: "#ccc" }}>
+          <div className={poiret.className}>
             {`Nice to see you back, ${session?.user?.name ?? "Guest"}`}
           </div>
         </div>
-
-        {/* Columna 2: Search bar */}
-        <div style={{ position: "relative", width: "100%", maxWidth: "600px" }}>
-          <span
-            style={{
-              position: "absolute",
-              left: "1rem",
-              top: "0.9rem",
-              color: "#aaa",
-              fontSize: "20px",
-            }}
-          >
-            🔍
-          </span>
-          <input
-            type="text"
-            placeholder="Search..."
-            style={{
-              width: "100%",
-              padding: "0.8rem 1rem 0.8rem 3rem",
-              borderRadius: "9999px",
-              backgroundColor: "#111",
-              color: "#fff",
-              fontSize: "16px",
-              border: "none",
-              outline: "none",
-            }}
-          />
-        </div>
-
-        {/* Columna 3: Favoritos */}
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <button
-              key={i}
-              style={{
-                width: "45px",
-                height: "45px",
-                backgroundColor: "#222",
-                border: "none",
-                borderRadius: "8px",
-                cursor: "pointer",
-                color: "#fff",
-                fontSize: "28px",
-                transition: "background-color 0.3s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#444")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#222")}
-              onClick={() => console.log(`Abrir menú de selección para slot ${i + 1}`)}
-            >
-              +
-            </button>
-          ))}
-        </div>
-
-        {/* Columna 4: Hamburguesa */}
-        <div style={{ display: "flex", justifyContent: "flex-end" }}>
-          <button
-            style={{
-              background: "none",
-              border: "none",
-              padding: 0,
-              cursor: "pointer",
-            }}
-          >
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem" }}>
-              <span style={{ width: "25px", height: "4px", backgroundColor: "#fff" }}></span>
-              <span style={{ width: "25px", height: "4px", backgroundColor: "#fff" }}></span>
-              <span style={{ width: "25px", height: "4px", backgroundColor: "#fff" }}></span>
-              <span style={{ width: "25px", height: "4px", backgroundColor: "#fff" }}></span>
-            </div>
-          </button>
-        </div>
       </header>
 
-      {/* SECCIÓN DEBAJO DEL HEADER */}
-<main
-  style={{
-    padding: "2rem",
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, 150px)",
-    gap: "1.5rem",
-    justifyContent: "start",
-    
-  }}
->{books.map((book, index) => (
-  <NewBookButton
-    key={index}
-    coverUrl={book.coverUrl}
-    title={book.title}
-    onClick={() => {}}
-  />
-))}
+      {!selectedBook ? (
+        <main style={{ padding: "2rem", display: "grid", gridTemplateColumns: "repeat(auto-fill, 150px)", gap: "1.5rem" }}>
+          {books.map((book, index) => (
+            <NewBookButton
+              key={index}
+              coverUrl={book.coverUrl}
+              title={book.title}
+              onClick={() => {
+              console.log("OPENING BOOK:", book);
+              setSelectedBook(book);
+}}
+            />
+          ))}
 
-{/* Add new book slot */}
-<NewBookButton
-  coverUrl={null}
-  title="New book"
-  onClick={() => setShowForm(true)}
-/>
-      </main>
+          <NewBookButton
+            coverUrl={null}
+            title="New book"
+            onClick={() => setShowForm(true)}
+          />
+        </main>
+      ) : (
+        <div style={{ padding: "1rem", height: "100vh" }}>
+          <button onClick={() => setSelectedBook(null)}>← Back</button>
+          <iframe src={selectedBook.pdfUrl || ""} width="100%" height="90%" />
+        </div>
+      )}
 
-      {/* MODAL DEL FORMULARIO */}
       {showForm && (
-  <NewBookForm
-    onClose={() => setShowForm(false)}
-    onBookAdded={handleBookAdded}
-  />
-)}
+        <NewBookForm
+          onClose={() => setShowForm(false)}
+          onBookAdded={handleBookAdded}
+        />
+      )}
+
+      <LogoutButton />
     </div>
   );
 }

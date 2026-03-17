@@ -1,20 +1,91 @@
-import clientPromise from "@/lib/mongodb";
 import { NextResponse } from "next/server";
+import clientPromise from "@/lib/mongodb";
 
+// ==========================
+// ✅ GET BOOKS (by user)
+// ==========================
+export async function GET(req: Request) {
+  try {
+    const client = await clientPromise;
+    const db = client.db("kavi");
+
+    // 🔥 Get userId from headers
+    const userId = req.headers.get("user-id");
+
+    if (!userId) {
+      return NextResponse.json([]);
+    }
+
+    const books = await db
+      .collection("books")
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return NextResponse.json(books);
+  } catch (error) {
+    console.error("GET ERROR:", error);
+    return NextResponse.json({ error: "Failed" }, { status: 500 });
+  }
+}
+
+// ==========================
+// ✅ SAVE BOOK
+// ==========================
 export async function POST(req: Request) {
+  try {
+    const body = await req.json();
 
-  console.log("API ROUTE HIT");
+// 🔥 ADD THIS RIGHT HERE
+console.log("USER ID RECEIVED:", body.userId);
+    const client = await clientPromise;
+    const db = client.db("kavi");
 
-  const body = await req.json();
+    const userId = body.userId;
 
-  const client = await clientPromise;
+    if (!userId) {
+      return NextResponse.json(
+        { error: "No userId" },
+        { status: 401 }
+      );
+    }
 
-  const db = client.db("KAVI_Reader");
+    const collection = db.collection("books");
 
-  const result = await db.collection("books").insertOne(body);
+    // 🔥 DUPLICATE CHECK
+    const existingBook = await collection.findOne({
+      userId,
+      title: body.title,
+      author: body.author,
+      numPages: body.numPages,
+    });
 
-  return NextResponse.json({
-    success: true,
-    id: result.insertedId
-  });
+    if (existingBook) {
+      return NextResponse.json(
+        { error: "Book already exists" },
+        { status: 400 }
+      );
+    }
+
+    // 🔥 AUTO BOOK NUMBER
+    const count = await collection.countDocuments({ userId });
+
+    const newBook = {
+      ...body,
+      userId,
+      bookNumber: count + 1,
+      createdAt: new Date(),
+    };
+
+    await collection.insertOne(newBook);
+
+    return NextResponse.json(newBook);
+
+  } catch (error) {
+    console.error("POST ERROR:", error);
+    return NextResponse.json(
+      { error: "Server error" },
+      { status: 500 }
+    );
+  }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-
+import { useSession } from "next-auth/react";
 
 export default function NewBookForm({
   onClose,
@@ -10,6 +10,8 @@ export default function NewBookForm({
   onClose: () => void;
   onBookAdded: (book: any) => void;
 }) {
+
+  const { data: session } = useSession(); // ✅ INSIDE component
 
 const [pdfName, setPdfName] = React.useState<string | null>(null);
 const [numPages, setNumPages] = React.useState<string>("");
@@ -23,6 +25,7 @@ const [chapters, setChapters] = React.useState("");
 const [frontCover, setFrontCover] = React.useState<string | null>(null);
 const [backCover, setBackCover] = React.useState<string | null>(null);
 const [spine, setSpine] = React.useState<string | null>(null);
+const [pdfFile, setPdfFile] = React.useState<File | null>(null);
 
 const [starRating, setStarRating] = React.useState<number>(0);const [numericRating, setNumericRating] = React.useState<string>("");
 
@@ -77,8 +80,9 @@ const [starRating, setStarRating] = React.useState<number>(0);const [numericRati
 
     if (setter) setter(url);
 
-   if (file.type === "application/pdf") {
+if (file.type === "application/pdf") {
 
+  setPdfFile(file); // ✅ SAVE THE REAL FILE
   setPdfName(file.name);
 
   try {
@@ -147,15 +151,47 @@ const [starRating, setStarRating] = React.useState<number>(0);const [numericRati
 
     const pixel = ctx.getImageData(realX, realY, 1, 1).data;
     const hex = `#${[pixel[0], pixel[1], pixel[2]]
-      .map((c) => c.toString(16).padStart(2, "0"))
-      .join("")}`;
+        .map((c) => c.toString(16).padStart(2, "0"))
+        .join("")}`;
 
     setter(hex);
-  };
+    };
 
   // 👉 Aquí va la integración con Mongo vía API
-  const handleSubmit = async () => {
-   const bookData = {
+    const handleSubmit = async () => {
+
+  try {
+
+    // 1️⃣ Get the PDF file input
+if (!pdfFile) {
+  alert("Please upload a PDF first");
+  return;
+}
+
+    // 2️⃣ Send file to /api/upload
+    const formData = new FormData();
+formData.append("file", pdfFile);
+
+    const uploadRes = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!uploadRes.ok) {
+      throw new Error("Upload failed");
+    }
+
+    const uploadData = await uploadRes.json();
+
+    console.log("Uploaded to R2:", uploadData.url);
+
+    // 3️⃣ Save to MongoDB
+   if (!session?.user?.email) {
+  alert("No user session");
+  return;
+}
+
+const bookData = {
   title,
   author,
   editorial,
@@ -177,80 +213,86 @@ const [starRating, setStarRating] = React.useState<number>(0);const [numericRati
   numericRating,
 
   synopsis,
-  pdfUrl: pdfName,
-  userId: "ID_DE_TU_USUARIO",
+
+  pdfUrl: uploadData.url,
+
+  // 🔥 FORCE THIS
+  userId: session.user.email,
 };
-    try {
-      const res = await fetch("/api/books", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bookData),
-      });
+    const res = await fetch("/api/books", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(bookData),
+    });
 
-      if (!res.ok) {
-        throw new Error("Error al guardar el libro");
-      }
+if (!res.ok) {
+  const errText = await res.text();
+  console.error("SERVER ERROR:", errText);
+  throw new Error("Error saving book");
+}
 
-const result = await res.json();
-console.log("Libro guardado en Mongo:", result);
+    console.log("Saved book:", bookData);
 
-onBookAdded(bookData);
-onClose();
-    } catch (err) {
-      console.error(err);
-    }
-  };
+    onBookAdded(bookData);
+    onClose();
 
-  return (
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+    return (
     <div
-      style={{
-        position: "fixed",
-        top: 0, left: 0,
-        width: "100%", height: "100%",
-        backgroundColor: "rgba(0,0,0,0.7)",
-        display: "flex", justifyContent: "center", alignItems: "center",
-        zIndex: 1000,
-      }}
-    >
-      <div
         style={{
-          backgroundColor: "#1a1a1a",
-          padding: "2rem",
-          borderRadius: "10px",
-          width: "950px",
-          maxHeight: "90vh",
-          overflowY: "auto",
-          color: "#fff",
-          boxShadow: "0 0 20px rgba(0,0,0,0.5)",
-          display: "grid",
-          gridTemplateColumns: "0.8fr 1.2fr",
-          gap: "1rem",
+            position: "fixed",
+            top: 0, left: 0,
+            width: "100%", height: "100%",
+            backgroundColor: "rgba(0,0,0,0.7)",
+            display: "flex", justifyContent: "center", alignItems: "center",
+            zIndex: 1000,
         }}
-      >
-        {/* Upload PDF */}
+    >
+    <div
+        style={{
+            backgroundColor: "#1a1a1a",
+            padding: "2rem",
+            borderRadius: "10px",
+            width: "950px",
+            maxHeight: "90vh",
+            overflowY: "auto",
+            color: "#fff",
+            boxShadow: "0 0 20px rgba(0,0,0,0.5)",
+            display: "grid",
+            gridTemplateColumns: "0.8fr 1.2fr",
+            gap: "1rem",
+        }}
+    >
+    {/* Upload PDF */}
         <div style={{ gridColumn: "1 / span 2", marginBottom: "1rem" }}>
-          <label style={{ display: "block", marginBottom: "0.5rem" }}>File name:</label>
-          <label
+            <label style={{ display: "block", marginBottom: "0.5rem" }}>File name:</label>
+            <label
             style={{
-              display: "inline-block",
-              backgroundColor: "#444",
-              color: "#fff",
-              padding: "0.6rem 1.2rem",
-              borderRadius: "6px",
-              cursor: "pointer",
-              transition: "background-color 0.3s",
+                display: "inline-block",
+                backgroundColor: "#444",
+                color: "#fff",
+                padding: "0.6rem 1.2rem",
+                borderRadius: "6px",
+                cursor: "pointer",
+                transition: "background-color 0.3s",
             }}
-          >
+        >
             Upload PDF
             <input
-              type="file"
-              accept="application/pdf"
-              onChange={(e) => handleFileUpload(e)}
-              style={{ display: "none" }}
+                type="file"
+                accept="application/pdf"
+                onChange={(e) => handleFileUpload(e)}
+                style={{ display: "none" }}
             />
-          </label>
-          <div style={{ marginTop: "0.5rem" }}>{pdfName ?? "No file selected"}</div>
-        </div>
+            </label>
+            <div style={{ marginTop: "0.5rem" }}>{pdfName ?? "No file selected"}</div>
+            </div>
 
         {/* Metadata */}
         <div>

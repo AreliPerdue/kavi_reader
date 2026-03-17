@@ -12,14 +12,14 @@ export default function LoginPage() {
     console.log("Login button clicked ✅");
     // 👇 quitamos redirect:false para que se abra el popup de Google
     await signIn("google", {
-      callbackUrl: "/pdfviewer", // 👈 redirige al PDF Viewer después de login
+      callbackUrl: "/home", // 👈 redirige al PDF Viewer después de login
     });
   }
 
   async function handleSignup() {
     console.log("Signup button clicked ✅");
     await signIn("google", {
-      callbackUrl: "/pdfviewer", // 👈 también redirige al PDF Viewer después de signup
+      callbackUrl: "/home", // 👈 también redirige al PDF Viewer después de signup
     });
   }
 
