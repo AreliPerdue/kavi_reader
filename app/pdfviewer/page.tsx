@@ -1,13 +1,12 @@
 "use client";
 
+export const revalidate = 0;
+
 import { useSession } from "next-auth/react";
 import { useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 
-// 👇 Importa PdfViewer solo en cliente
-const PdfViewer = dynamic(() => import("../components/PdfViewer"), {
-  ssr: false,
-});
+const PdfViewer = dynamic(() => import("../components/PdfViewer"), { ssr: false });
 
 export default function PdfViewerPage() {
   const { data: session, status } = useSession();
